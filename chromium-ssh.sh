@@ -1,9 +1,9 @@
 #!/bin/bash
 # Title: chromium-ssh.sh
-# Version: 0.1
+# Version: 0.2
 # Author: Frédéric CHEVALIER <fcheval@txbiomed.org>
 # Created in: 2015-03-07
-# Modified in: 2015-03-07
+# Modified in: 2016-09-08
 # Licence : GPL v3
 
 
@@ -20,6 +20,7 @@ aim="Set a SSH tunnel for chromium."
 # Versions #
 #==========#
 
+# v0.2 - 2016-09-08: ssh id option added
 # v0.1 - 2015-03-07: http proxy added to work with some chromium versions
 # v0.0 - 2015-03-07: creation
 
@@ -32,13 +33,14 @@ aim="Set a SSH tunnel for chromium."
 # Usage message
 function usage {
     echo -e "
-    \e[32m ${0##*/} \e[00m -u|--usr username -s|--svr server -p|--port integer -l|--log path -h|--help
+    \e[32m ${0##*/} \e[00m -u|--usr username -s|--svr server -i|--id identity_file -p|--port integer -l|--log path -h|--help
 
 Aim=$aim
 
 Options:
     -u, --usr       user name required to connect the ssh server
     -s, --svr       address of the ssh server to set the ssh tunnel up
+    -i, --id        identity file used for ssh connection (optional)
     -p, --port      local port for ssh tunnel [default: 8080]
     -l, --log       path to the log file [default: /tmp/${0##*/}.log]
     -h, --help      this message
@@ -118,6 +120,7 @@ do
     case $1 in
         -u|--usr    ) myuser="$2" ; shift 2 ;;
         -s|--svr    ) myserver="$2" ; shift 2 ;;
+        -i|--id     ) myid="-i $2" ; shift 2;;
         -p|--port   ) myport="$2" ; shift 2 ;;
         -l|--log    ) mylog="$2" ; shift 2 ;;
         -h|--help   ) usage ; exit 0 ;;
@@ -147,6 +150,13 @@ then
 fi
 
 myssh_add="$myuser@$myserver"
+
+
+# Check for existing identity file
+if [[ -n "$myid" && ! -f $(echo "$myid" | cut -d " " -f 2-) ]]
+then
+    error "identity file does not exist" 1
+fi
 
 
 # Set default values if nothing specify
@@ -179,7 +189,7 @@ info "$mymsg"
 echo -e "\n$mymsg\n" >> "$mylog"
 
 # SSH tunnel
-ssh -M -S my-ctrl-socket -C2fnNT -D $myport "$myssh_add" &>> "$mylog"
+ssh $myid -M -S my-ctrl-socket -C2fnNT -D $myport "$myssh_add" &>> "$mylog"
 
 if [[ $? != 0 ]]
 then
@@ -187,7 +197,7 @@ then
 fi
 
 # Check socket
-ssh -S my-ctrl-socket -O check "$myssh_add" &>> "$mylog"
+ssh $myid -S my-ctrl-socket -O check "$myssh_add" &>> "$mylog"
 
 # Environmental parameters
 HTTP_PROXY="http://localhost:$myport"
@@ -225,7 +235,7 @@ info "$mymsg"
 echo -e "\n\n$mymsg\n" >> "$mylog"
 
 # Close SSH unnel
-ssh -S my-ctrl-socket -O exit "$myssh_add" &>> "$mylog"
+ssh $myid -S my-ctrl-socket -O exit "$myssh_add" &>> "$mylog"
 
 
 exit 0
