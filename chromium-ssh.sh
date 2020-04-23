@@ -1,9 +1,9 @@
 #!/bin/bash
 # Title: chromium-ssh.sh
-# Version: 0.0
+# Version: 0.1
 # Author: Frédéric CHEVALIER <fcheval@txbiomed.org>
 # Created in: 2015-03-07
-# Modified in:
+# Modified in: 2015-03-07
 # Licence : GPL v3
 
 
@@ -20,6 +20,7 @@ aim="Set a SSH tunnel for chromium."
 # Versions #
 #==========#
 
+# v0.1 - 2015-03-07: http proxy added to work with some chromium versions
 # v0.0 - 2015-03-07: creation
 
 
@@ -189,6 +190,8 @@ fi
 ssh -S my-ctrl-socket -O check "$myssh_add" &>> "$mylog"
 
 # Environmental parameters
+HTTP_PROXY="http://localhost:$myport"
+HTTPS_PROXY="https://localhost:$myport"
 SOCKS_SERVER="localhost:$myport"
 SOCKS_VERSION=5
 
