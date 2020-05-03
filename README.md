@@ -4,7 +4,10 @@ This script creates an SSH tunnel and start the Chromium browser with the right 
 
 ## Prerequisites
 
-To run the script properly, you need to install `chromium-browser` if not already present and to have an SSH server to connect to.
+To run the script properly, you need to install:
+* `chromium-browser` to have an SSH server to connect to,
+* `notify-send` to print message on the GUI interface,
+* `ssh-askpass` and `ssh-askpass-gnome` to enter passphrase or password on GUI.
 
 ## Files
 

@@ -1,9 +1,9 @@
 #!/bin/bash
 # Title: chromium-ssh.sh
-# Version: 0.2
-# Author: Frédéric CHEVALIER <fcheval@txbiomed.org>
+# Version: 0.3
+# Author: Frédéric CHEVALIER <f15.chevalier@gmail.com>
 # Created in: 2015-03-07
-# Modified in: 2016-09-08
+# Modified in: 2020-04-27
 # Licence : GPL v3
 
 
@@ -20,9 +20,12 @@ aim="Set a SSH tunnel for chromium."
 # Versions #
 #==========#
 
+# v0.3 - 2020-04-27: askpass box when run from GUI / version printed / code cleaning
 # v0.2 - 2016-09-08: ssh id option added
-# v0.1 - 2015-03-07: http proxy added to work with some chromium versions
+# v0.1 - 2015-03-07: http proxy added to work with some chromium version
 # v0.0 - 2015-03-07: creation
+
+version=$(grep -i -m 1 "version" "$0" | cut -d ":" -f 2 | sed "s/^ *//g")
 
 
 
@@ -37,8 +40,10 @@ function usage {
 
 Aim=$aim
 
+Version: $version
+
 Options:
-    -u, --usr       user name required to connect the ssh server
+    -u, --usr       user name required to connect the ssh server [default: $USER]
     -s, --svr       address of the ssh server to set the ssh tunnel up
     -i, --id        identity file used for ssh connection (optional)
     -p, --port      local port for ssh tunnel [default: 8080]
@@ -83,20 +88,13 @@ function error {
         notify-send $myicon -h string:x-canonical-append:allowed "${0##*/}" "Error: $1"
     fi
 
-    if [[ -n $2 ]]
-    then
-        exit $2
-    fi
+    [[ -n $2 ]] && exit $2
 }
 
 
 # Dependency test
 function test_dep {
-    which $1 &> /dev/null
-    if [[ $? != 0 ]]
-    then
-        error "Package $1 is needed. Exiting..." 1
-    fi
+    [[ ! $(which $1 2> /dev/null) ]] && error "Package $1 is needed. Exiting..." 1
 }
 
 
@@ -118,11 +116,11 @@ test_dep chromium-browser
 while [[ $# -gt 0 ]]
 do
     case $1 in
-        -u|--usr    ) myuser="$2" ; shift 2 ;;
+        -u|--usr    ) myuser="$2"   ; shift 2 ;;
         -s|--svr    ) myserver="$2" ; shift 2 ;;
-        -i|--id     ) myid="-i $2" ; shift 2;;
-        -p|--port   ) myport="$2" ; shift 2 ;;
-        -l|--log    ) mylog="$2" ; shift 2 ;;
+        -i|--id     ) myid="-i $2"  ; shift 2 ;;
+        -p|--port   ) myport="$2"   ; shift 2 ;;
+        -l|--log    ) mylog="$2"    ; shift 2 ;;
         -h|--help   ) usage ; exit 0 ;;
         *           ) error "Invalid option: $1" 1 ;;
     esac
@@ -139,35 +137,27 @@ fi
 
 
 # Check for mendatory options
-if [[ -z "$myuser" ]]
-then
-    error "username missing for ssh connection." 1
-fi
-
-if [[ -z "$myserver" ]]
-then
-    error "server address missing for ssh connection." 1
-fi
-
+[[ -z "$myuser" ]] && myuser=$USER
+[[ -z "$myserver" ]] && error "Server address missing for ssh connection. Exiting..." 1
 myssh_add="$myuser@$myserver"
 
 
 # Check for existing identity file
-if [[ -n "$myid" && ! -f $(echo "$myid" | cut -d " " -f 2-) ]]
-then
-    error "identity file does not exist" 1
-fi
+[[ -n "$myid" && ! -f $(echo "$myid" | cut -d " " -f 2-) ]] && error "Identity file does not exist. Exiting..." 1
 
 
 # Set default values if nothing specify
-if [[ -z "$port" ]]
-then
-    myport=8080
-fi
+[[ -z "$port" ]] && myport=8080
+[[ -z "$log" ]]  && mylog="/tmp/${0##*/}.log"
 
-if [[ -z "$log" ]]
+# Password/phrase in GUI context
+if [[  -t 0 ]]
 then
-    mylog="/tmp/${0##*/}.log"
+    myssh="ssh $myid"
+else
+    test_dep ssh-askpass
+    export SSH_ASKPASS=$(which ssh-askpass)
+    myssh="setsid ssh $myid"
 fi
 
 
@@ -189,17 +179,14 @@ info "$mymsg"
 echo -e "\n$mymsg\n" >> "$mylog"
 
 # SSH tunnel
-ssh $myid -M -S my-ctrl-socket -C2fnNT -D $myport "$myssh_add" &>> "$mylog"
+$myssh -M -S my-ctrl-socket -C2fnNT -D $myport "$myssh_add" &>> "$mylog"
 
-if [[ $? != 0 ]]
-then
-    error "SSH tunnel cannot be set up. See $mylog" 1
-fi
+[[ $? != 0 ]] && error "SSH tunnel cannot be set up. See $mylog." 1
 
 # Check socket
-ssh $myid -S my-ctrl-socket -O check "$myssh_add" &>> "$mylog"
+$myssh -S my-ctrl-socket -O check "$myssh_add" &>> "$mylog"
 
-# Environmental parameters
+# Environment variables
 HTTP_PROXY="http://localhost:$myport"
 HTTPS_PROXY="https://localhost:$myport"
 SOCKS_SERVER="localhost:$myport"
@@ -219,10 +206,7 @@ echo -e "\n\n$mymsg\n" >> "$mylog"
 ## source: http://www.chromium.org/developers/design-documents/network-stack/socks-proxy
 chromium-browser --proxy-server="socks://localhost:$myport" --host-resolver-rules="MAP * 0.0.0.0 , EXCLUDE localhost" &>> "$mylog"
 
-if [[ $? != 0 ]]
-then
-    error "Chromium closed unexpectedly. See $mylog" 1
-fi
+[[ $? != 0 ]] && error "Chromium closed unexpectedly. See $mylog." 1
 
 
 #-----------------#
@@ -235,7 +219,7 @@ info "$mymsg"
 echo -e "\n\n$mymsg\n" >> "$mylog"
 
 # Close SSH unnel
-ssh $myid -S my-ctrl-socket -O exit "$myssh_add" &>> "$mylog"
+$myssh -S my-ctrl-socket -O exit "$myssh_add" &>> "$mylog"
 
 
 exit 0
