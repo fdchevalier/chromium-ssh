@@ -1,9 +1,9 @@
 #!/bin/bash
 # Title: chromium-ssh.sh
-# Version: 0.3
+# Version: 0.4
 # Author: Frédéric CHEVALIER <f15.chevalier@gmail.com>
 # Created in: 2015-03-07
-# Modified in: 2020-04-27
+# Modified in: 2020-12-23
 # Licence : GPL v3
 
 
@@ -20,6 +20,7 @@ aim="Set a SSH tunnel for chromium."
 # Versions #
 #==========#
 
+# v0.4 - 2020-12-23: random log suffix on default log filename added / cleaning step added
 # v0.3 - 2020-04-27: askpass box when run from GUI / version printed / code cleaning
 # v0.2 - 2016-09-08: ssh id option added
 # v0.1 - 2015-03-07: http proxy added to work with some chromium version
@@ -148,7 +149,7 @@ myssh_add="$myuser@$myserver"
 
 # Set default values if nothing specify
 [[ -z "$port" ]] && myport=8080
-[[ -z "$log" ]]  && mylog="/tmp/${0##*/}.log"
+[[ -z "$log" ]]  && mylog="/tmp/${0##*/}_$RANDOM.log"
 
 # Password/phrase in GUI context
 if [[  -t 0 ]]
@@ -221,5 +222,7 @@ echo -e "\n\n$mymsg\n" >> "$mylog"
 # Close SSH unnel
 $myssh -S my-ctrl-socket -O exit "$myssh_add" &>> "$mylog"
 
+# Remove log
+rm "$mylog"
 
 exit 0
