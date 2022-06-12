@@ -1,10 +1,10 @@
 #!/bin/bash
 # Title: chromium-ssh.sh
-# Version: 0.5
+# Version: 0.6
 # Author: Frédéric CHEVALIER <f15.chevalier@gmail.com>
 # Created in: 2015-03-07
-# Modified in: 2022-01-25
-# Licence : GPL v3
+# Modified in: 2022-06-11
+# License : GPL v3
 
 
 
@@ -12,7 +12,7 @@
 # Aims #
 #======#
 
-aim="Set a SSH tunnel for chromium."
+aim="Set a SSH tunnel for chromium based web browsers."
 
 
 
@@ -20,7 +20,8 @@ aim="Set a SSH tunnel for chromium."
 # Versions #
 #==========#
 
-# v0.5 - 2022-01-25: Possibility to use two servers added / browser option added / socket variable added / trap added
+# v0.6 - 2022-06-11: microsoft-edge added
+# v0.5 - 2022-01-25: possibility to use two servers added / browser option added / socket variable added / trap added
 # v0.4 - 2020-12-23: random log suffix on default log filename added / cleaning step added
 # v0.3 - 2020-04-27: askpass box when run from GUI / version printed / code cleaning
 # v0.2 - 2016-09-08: ssh id option added
@@ -182,7 +183,7 @@ fi
 #---------------#
 
 test_dep $browser
-[[ ! $browser =~ ^(chromium-browser|google-chrome)$ ]] && error "Only Chromium or Google Chrome browsers are compatible. Exiting..." 1
+[[ ! $browser =~ ^(chromium-browser|google-chrome|microsoft-edge)$ ]] && error "Only Chromium, Google Chrome or Microsoft Edge browsers are compatible. Exiting..." 1
 
 
 #-----------------------#
